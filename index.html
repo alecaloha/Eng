@@ -1,95 +1,985 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark" data-font="1">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SAT 1000 · 可靠进度版</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>SAT 1000</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
-    .word-card { transition: 0.2s; border-radius: 1.5rem; }
-    .word-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -12px rgba(0,0,0,0.2); }
-    .active-filter { background-color: #4f46e5 !important; color: white !important; }
-    .quiz-option { transition: 0.1s; cursor: pointer; }
-    .quiz-option:hover { background-color: #e0e7ff; }
+    /* ═══════════════════════════════════════════
+       DARK THEME (default)
+    ═══════════════════════════════════════════ */
+    :root,
+    [data-theme="dark"] {
+      --bg: #0d0f14;
+      --surface: #141720;
+      --surface2: #1a1e2a;
+      --surface3: #20263a;
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.14);
+      --text-primary: #eef0f6;
+      --text-secondary: #8b90a0;
+      --text-dim: #4a5068;
+      --accent: #6c8eff;
+      --accent-glow: rgba(108,142,255,0.18);
+      --accent-dark: #3d5fd9;
+      --ambient: rgba(108,142,255,0.08);
+      --scrollbar-thumb: #20263a;
+      --shadow-card: 0 2px 16px rgba(0,0,0,0.3);
+      --quiz-shadow: 0 24px 80px rgba(0,0,0,0.6);
+      --modal-bg: rgba(0,0,0,0.7);
+      --topline: rgba(255,255,255,0.1);
+    }
+
+    /* ═══════════════════════════════════════════
+       LIGHT THEME
+    ═══════════════════════════════════════════ */
+    [data-theme="light"] {
+      --bg: #f4f6fb;
+      --surface: #ffffff;
+      --surface2: #f0f2f8;
+      --surface3: #e6e9f4;
+      --border: rgba(0,0,0,0.08);
+      --border-hover: rgba(0,0,0,0.16);
+      --text-primary: #111827;
+      --text-secondary: #4b5563;
+      --text-dim: #9ca3af;
+      --accent: #3d5fd9;
+      --accent-glow: rgba(61,95,217,0.1);
+      --accent-dark: #2a45b8;
+      --ambient: rgba(61,95,217,0.06);
+      --scrollbar-thumb: #d1d5e8;
+      --shadow-card: 0 2px 16px rgba(0,0,0,0.08);
+      --quiz-shadow: 0 24px 80px rgba(0,0,0,0.18);
+      --modal-bg: rgba(0,0,0,0.35);
+      --topline: rgba(0,0,0,0.06);
+      /* status colors — slightly adjusted for light */
+      --red: #d9363e;
+      --red-bg: rgba(217,54,62,0.08);
+      --orange: #c2600a;
+      --orange-bg: rgba(194,96,10,0.08);
+      --yellow: #9a7a00;
+      --yellow-bg: rgba(154,122,0,0.08);
+      --green: #1a8a58;
+      --green-bg: rgba(26,138,88,0.08);
+      --purple: #6b3fb8;
+      --purple-bg: rgba(107,63,184,0.08);
+    }
+
+    /* ═══════════════════════════════════════════
+       SEMANTIC COLORS (dark defaults)
+    ═══════════════════════════════════════════ */
+    :root {
+      --red: #ff5c6a;
+      --red-bg: rgba(255,92,106,0.1);
+      --orange: #ff8c4b;
+      --orange-bg: rgba(255,140,75,0.1);
+      --yellow: #f5c842;
+      --yellow-bg: rgba(245,200,66,0.1);
+      --green: #4fd89a;
+      --green-bg: rgba(79,216,154,0.1);
+      --purple: #b87cff;
+      --purple-bg: rgba(184,124,255,0.1);
+      --radius: 14px;
+      --radius-sm: 8px;
+      --radius-pill: 999px;
+      --transition: 0.2s cubic-bezier(0.25,0.46,0.45,0.94);
+      /* font scale */
+      --fs-scale: 1;
+    }
+
+    /* ═══════════════════════════════════════════
+       FONT SCALE
+    ═══════════════════════════════════════════ */
+    [data-font="1"]  { --fs-scale: 1; }
+    [data-font="12"] { --fs-scale: 1.2; }
+    [data-font="15"] { --fs-scale: 1.5; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { transition: background 0.3s, color 0.3s; }
+
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: 'Sora', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px; left: 50%;
+      transform: translateX(-50%);
+      width: 800px; height: 400px;
+      background: radial-gradient(ellipse, var(--ambient) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── Layout ─── */
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ─── Top bar (theme + font controls) ─── */
+    .top-controls {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .ctrl-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: 'Sora', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      padding: 5px 11px;
+      border-radius: var(--radius-pill);
+      transition: var(--transition);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .ctrl-btn:hover { color: var(--text-primary); background: var(--surface3); }
+    .ctrl-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(108,142,255,0.3);
+    }
+
+    [data-theme="light"] .ctrl-btn.active {
+      box-shadow: 0 2px 8px rgba(61,95,217,0.25);
+    }
+
+    /* theme toggle icon */
+    .theme-icon { font-size: 12px; }
+
+    /* ─── Header ─── */
+    .header {
+      text-align: center;
+      margin-bottom: 44px;
+    }
+
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-glow);
+      border: 1px solid rgba(108,142,255,0.25);
+      color: var(--accent);
+      font-size: calc(11px * var(--fs-scale));
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
+      margin-bottom: 16px;
+      transition: background 0.3s, border-color 0.3s, color 0.3s;
+    }
+
+    [data-theme="light"] .header-badge { border-color: rgba(61,95,217,0.2); }
+
+    .header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(42px, 7vw, 72px);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--text-primary) 30%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      color: var(--text-secondary);
+      font-size: calc(13px * var(--fs-scale));
+      font-weight: 400;
+      letter-spacing: 0.01em;
+    }
+
+    /* ─── Actions Bar ─── */
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 32px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-family: 'Sora', sans-serif;
+      font-size: calc(12.5px * var(--fs-scale));
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      background: var(--surface2);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      border-color: var(--border-hover);
+      color: var(--text-primary);
+      background: var(--surface3);
+      transform: translateY(-1px);
+    }
+
+    .btn i { font-size: 11px; opacity: 0.8; }
+
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); color: #fff; box-shadow: 0 4px 20px rgba(108,142,255,0.35); }
+
+    .btn-danger { background: var(--red-bg); border-color: rgba(255,92,106,0.25); color: var(--red); }
+    .btn-danger:hover { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+    [data-theme="light"] .btn-danger { border-color: rgba(217,54,62,0.25); }
+
+    .btn-success { background: var(--green-bg); border-color: rgba(79,216,154,0.2); color: var(--green); }
+    .btn-success:hover { border-color: var(--green); }
+    [data-theme="light"] .btn-success { border-color: rgba(26,138,88,0.2); }
+
+    .btn-amber { background: var(--yellow-bg); border-color: rgba(245,200,66,0.2); color: var(--yellow); }
+    .btn-amber:hover { border-color: var(--yellow); }
+    [data-theme="light"] .btn-amber { border-color: rgba(154,122,0,0.2); }
+
+    .btn-sky { background: rgba(100,200,255,0.08); border-color: rgba(100,200,255,0.2); color: #64c8ff; }
+    .btn-sky:hover { border-color: #64c8ff; }
+    [data-theme="light"] .btn-sky { background: rgba(0,130,200,0.07); border-color: rgba(0,130,200,0.2); color: #0077bb; }
+    [data-theme="light"] .btn-sky:hover { border-color: #0077bb; color: #0077bb; }
+
+    /* ─── Filter Row ─── */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+
+    .filter-btn {
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border);
+      background: transparent;
+      font-family: 'Sora', sans-serif;
+      font-size: calc(12px * var(--fs-scale));
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .filter-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
+    .filter-btn.active-filter { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 16px rgba(108,142,255,0.3); }
+
+    .filter-btn[data-filter="unlearned"] { color: var(--purple); border-color: rgba(184,124,255,0.2); }
+    .filter-btn[data-filter="unlearned"]:not(.active-filter):hover { background: var(--purple-bg); }
+    .filter-btn[data-filter="0"] { color: var(--red); border-color: rgba(255,92,106,0.2); }
+    .filter-btn[data-filter="0"]:not(.active-filter):hover { background: var(--red-bg); }
+    .filter-btn[data-filter="1"] { color: var(--orange); border-color: rgba(255,140,75,0.2); }
+    .filter-btn[data-filter="1"]:not(.active-filter):hover { background: var(--orange-bg); }
+    .filter-btn[data-filter="2"] { color: var(--yellow); border-color: rgba(245,200,66,0.2); }
+    .filter-btn[data-filter="2"]:not(.active-filter):hover { background: var(--yellow-bg); }
+    .filter-btn[data-filter="3"] { color: var(--green); border-color: rgba(79,216,154,0.2); }
+    .filter-btn[data-filter="3"]:not(.active-filter):hover { background: var(--green-bg); }
+
+    /* ─── Search ─── */
+    .search-wrap {
+      position: relative;
+      max-width: 420px;
+      margin: 0 auto 28px;
+    }
+
+    .search-wrap i {
+      position: absolute;
+      left: 16px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    #searchInput {
+      width: 100%;
+      padding: 11px 16px 11px 42px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      font-family: 'Sora', sans-serif;
+      font-size: calc(13px * var(--fs-scale));
+      color: var(--text-primary);
+      transition: var(--transition);
+      outline: none;
+    }
+
+    #searchInput::placeholder { color: var(--text-dim); }
+    #searchInput:focus { border-color: rgba(108,142,255,0.4); background: var(--surface3); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+    /* ─── Status Bar ─── */
+    #statusBar {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: calc(11.5px * var(--fs-scale));
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      margin-bottom: 28px;
+    }
+
+    /* ─── Words Grid ─── */
+    #wordsGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    /* ─── Word Card ─── */
+    .word-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: background 0.3s, border-color 0.3s, transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+      animation: cardIn 0.3s both;
+    }
+
+    .word-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--topline), transparent);
+      opacity: 0;
+      transition: var(--transition);
+    }
+
+    .word-card:hover { border-color: var(--border-hover); transform: translateY(-3px); box-shadow: var(--shadow-card); }
+    .word-card:hover::before { opacity: 1; }
+
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .word-info { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+
+    .word-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: calc(22px * var(--fs-scale));
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: var(--transition);
+      line-height: 1.2;
+    }
+
+    .word-text:hover { color: var(--accent); }
+
+    .word-pos {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: calc(10px * var(--fs-scale));
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      background: var(--surface3);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      letter-spacing: 0.04em;
+    }
+
+    .speak-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      transition: var(--transition);
+      font-size: calc(13px * var(--fs-scale));
+      flex-shrink: 0;
+    }
+
+    .speak-btn:hover { color: var(--accent); background: var(--accent-glow); }
+
+    .word-def {
+      font-size: calc(13px * var(--fs-scale));
+      line-height: 1.65;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .word-example {
+      font-size: calc(12px * var(--fs-scale));
+      color: var(--text-dim);
+      font-style: italic;
+      line-height: 1.5;
+      padding-left: 10px;
+      border-left: 2px solid var(--border);
+      margin-bottom: 14px;
+    }
+
+    .card-footer { display: flex; flex-direction: column; gap: 10px; }
+    .status-row { display: flex; justify-content: space-between; align-items: center; }
+
+    .status-badge {
+      font-size: calc(10.5px * var(--fs-scale));
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      letter-spacing: 0.04em;
+    }
+
+    .status-unlearned { background: rgba(75,80,100,0.2); color: var(--text-dim); }
+    [data-theme="light"] .status-unlearned { background: rgba(0,0,0,0.06); }
+    .status-0 { background: var(--red-bg); color: var(--red); border: 1px solid rgba(255,92,106,0.2); }
+    .status-1 { background: var(--orange-bg); color: var(--orange); border: 1px solid rgba(255,140,75,0.2); }
+    .status-2 { background: var(--yellow-bg); color: var(--yellow); border: 1px solid rgba(245,200,66,0.2); }
+    .status-3 { background: var(--green-bg); color: var(--green); border: 1px solid rgba(79,216,154,0.2); }
+
+    .rate-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .rate-btn {
+      padding: 6px 0;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      font-family: 'Sora', sans-serif;
+      font-size: calc(11px * var(--fs-scale));
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      letter-spacing: 0.03em;
+    }
+
+    .rate-btn[data-level="0"] { color: var(--red); }
+    .rate-btn[data-level="0"]:hover { background: var(--red-bg); border-color: var(--red); }
+    .rate-btn[data-level="1"] { color: var(--orange); }
+    .rate-btn[data-level="1"]:hover { background: var(--orange-bg); border-color: var(--orange); }
+    .rate-btn[data-level="2"] { color: var(--yellow); }
+    .rate-btn[data-level="2"]:hover { background: var(--yellow-bg); border-color: var(--yellow); }
+    .rate-btn[data-level="3"] { color: var(--green); }
+    .rate-btn[data-level="3"]:hover { background: var(--green-bg); border-color: var(--green); }
+
+    /* Empty state */
+    .empty-state { grid-column: 1 / -1; text-align: center; padding: 80px 24px; color: var(--text-dim); }
+    .empty-state i { font-size: 36px; margin-bottom: 16px; display: block; opacity: 0.4; }
+    .empty-state p { font-size: calc(14px * var(--fs-scale)); }
+
+    /* ─── Quiz Modal ─── */
+    #quizPanel {
+      position: fixed; inset: 0;
+      background: var(--modal-bg);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 24px;
+    }
+
+    #quizPanel.hidden { display: none; }
+
+    .quiz-card {
+      background: var(--surface);
+      border: 1px solid var(--border-hover);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 520px;
+      overflow: hidden;
+      box-shadow: var(--quiz-shadow);
+      animation: modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.92) translateY(16px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .quiz-header {
+      background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+      padding: 18px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .quiz-header h3 {
+      font-size: calc(14px * var(--fs-scale));
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: 0.02em;
+    }
+
+    .quiz-close {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      color: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+
+    .quiz-close:hover { background: rgba(255,255,255,0.28); }
+
+    .quiz-body { padding: 24px; }
+
+    .quiz-meta {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      font-size: calc(12px * var(--fs-scale));
+      color: var(--text-secondary);
+    }
+
+    .quiz-meta span { display: flex; align-items: center; gap: 5px; }
+
+    .quiz-word-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
+    #quizWord {
+      font-family: 'DM Serif Display', serif;
+      font-size: calc(34px * var(--fs-scale));
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    #quizOptions { display: flex; flex-direction: column; gap: 8px; }
+
+    .quiz-option {
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-secondary);
+      font-size: calc(13px * var(--fs-scale));
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: left;
+      display: flex;
+      gap: 10px;
+    }
+
+    .quiz-option:hover { border-color: var(--accent); background: var(--accent-glow); color: var(--text-primary); }
+
+    .quiz-option .opt-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: calc(11px * var(--fs-scale));
+      font-weight: 700;
+      color: var(--accent);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .quiz-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 18px;
+    }
+
+    #quizFeedback { font-size: calc(12.5px * var(--fs-scale)); font-weight: 500; }
+    #quizFeedback .correct { color: var(--green); }
+    #quizFeedback .wrong { color: var(--red); }
+
+    #nextQuizBtn {
+      padding: 9px 20px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-family: 'Sora', sans-serif;
+      font-size: calc(13px * var(--fs-scale));
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      letter-spacing: 0.02em;
+    }
+
+    #nextQuizBtn:hover { background: var(--accent-dark); box-shadow: 0 4px 16px rgba(108,142,255,0.4); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Sort Bar ─── */
+    .sort-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .sort-label {
+      font-size: calc(11.5px * var(--fs-scale));
+      font-weight: 600;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .sort-group {
+      display: flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .sort-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: 'Sora', sans-serif;
+      font-size: calc(12px * var(--fs-scale));
+      font-weight: 500;
+      color: var(--text-secondary);
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .sort-btn i { font-size: 11px; }
+    .sort-btn:hover { color: var(--text-primary); background: var(--surface3); }
+
+    .sort-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(108,142,255,0.3);
+    }
+
+    [data-theme="light"] .sort-btn.active {
+      box-shadow: 0 2px 10px rgba(61,95,217,0.2);
+    }
+
+    /* similar-sort: cluster divider */
+    .cluster-divider {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 6px 0 2px;
+    }
+
+    .cluster-divider-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .cluster-divider-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: calc(10px * var(--fs-scale));
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      padding: 3px 10px;
+      background: var(--accent-glow);
+      border: 1px solid rgba(108,142,255,0.2);
+      border-radius: var(--radius-pill);
+    }
+
+    [data-theme="light"] .cluster-divider-label {
+      border-color: rgba(61,95,217,0.2);
+    }
+
+    /* shuffle animation */
+    @keyframes shuffleIn {
+      0%   { opacity: 0; transform: translateY(14px) rotate(-1deg); }
+      100% { opacity: 1; transform: translateY(0) rotate(0deg); }
+    }
+    .sort-shuffle .word-card { animation: shuffleIn 0.32s both; }
+
+    @media (max-width: 600px) {
+      .app { padding: 28px 16px 60px; }
+      #wordsGrid { grid-template-columns: 1fr; }
+      .header h1 { font-size: 48px; }
+      .top-controls { justify-content: center; flex-wrap: wrap; }
+      .sort-bar { gap: 8px; }
+    }
   </style>
 </head>
-<body class="bg-gradient-to-br from-gray-50 to-indigo-50 min-h-screen">
+<body>
 
-  <div class="max-w-7xl mx-auto px-4 py-6">
-    <div class="text-center mb-6">
-      <h1 class="text-4xl font-bold text-indigo-700">SAT 1000</h1>
-      <p class="text-gray-500 text-sm">标记熟练度 · 错题优先 · 自动持久化本地进度</p>
+  <div class="app">
+
+    <!-- Top Controls: Theme + Font Size -->
+    <div class="top-controls">
+      <!-- Font size -->
+      <div class="ctrl-group" id="fontGroup">
+        <button class="ctrl-btn active" data-font="1">A</button>
+        <button class="ctrl-btn" data-font="12">A+</button>
+        <button class="ctrl-btn" data-font="15">A++</button>
+      </div>
+      <!-- Theme -->
+      <div class="ctrl-group" id="themeGroup">
+        <button class="ctrl-btn active" data-theme-btn="dark"><i class="fas fa-moon theme-icon"></i> 夜间</button>
+        <button class="ctrl-btn" data-theme-btn="light"><i class="fas fa-sun theme-icon"></i> 日间</button>
+      </div>
     </div>
 
-    <div class="flex flex-wrap gap-2 justify-center mb-6">
-      <button id="importCsvBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm shadow"><i class="fas fa-upload mr-1"></i>导入CSV</button>
-      <button id="exportProgressBtn" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm shadow"><i class="fas fa-download mr-1"></i>导出进度</button>
-      <button id="importProgressBtn" class="px-4 py-2 bg-sky-600 text-white rounded-xl text-sm shadow"><i class="fas fa-upload mr-1"></i>导入进度</button>
-      <button id="exportAnkiBtn" class="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm shadow"><i class="fas fa-download mr-1"></i>导出Anki</button>
-      <button id="startQuizBtn" class="px-4 py-2 bg-rose-600 text-white rounded-xl text-sm shadow"><i class="fas fa-question-circle mr-1"></i>随机测验</button>
+    <!-- Header -->
+    <div class="header">
+      <div class="header-badge"><i class="fas fa-book-open"></i> Vocabulary Trainer</div>
+      <h1>SAT 1000</h1>
+      <p>标记熟练度 · 错题优先 · 自动持久化本地进度</p>
     </div>
 
-    <div class="flex flex-wrap gap-1 justify-center mb-5" id="filterButtons">
-      <button data-filter="all" class="filter-btn active-filter px-3 py-1.5 rounded-lg text-xs font-medium">全部</button>
-      <button data-filter="unlearned" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-100 text-purple-700">未练习</button>
-      <button data-filter="0" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-red-100 text-red-700">Again</button>
-      <button data-filter="1" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-100 text-orange-700">Hard</button>
-      <button data-filter="2" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-yellow-100 text-yellow-700">Good</button>
-      <button data-filter="3" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-green-100 text-green-700">Easy</button>
+    <!-- Actions -->
+    <div class="actions">
+      <button id="importCsvBtn" class="btn btn-primary"><i class="fas fa-upload"></i>导入 CSV</button>
+      <button id="exportProgressBtn" class="btn btn-success"><i class="fas fa-download"></i>导出进度</button>
+      <button id="importProgressBtn" class="btn btn-sky"><i class="fas fa-upload"></i>导入进度</button>
+      <button id="exportAnkiBtn" class="btn btn-amber"><i class="fas fa-layer-group"></i>导出 Anki</button>
+      <button id="startQuizBtn" class="btn btn-danger"><i class="fas fa-bolt"></i>随机测验</button>
     </div>
 
-    <div class="relative max-w-md mx-auto mb-6">
-      <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-      <input id="searchInput" type="text" placeholder="搜索单词..." class="w-full pl-9 pr-3 py-2 rounded-full border border-gray-200 bg-white text-sm">
+    <!-- Filters -->
+    <div class="filters" id="filterButtons">
+      <button data-filter="all" class="filter-btn active-filter">全部</button>
+      <button data-filter="unlearned" class="filter-btn">未练习</button>
+      <button data-filter="0" class="filter-btn">Again</button>
+      <button data-filter="1" class="filter-btn">Hard</button>
+      <button data-filter="2" class="filter-btn">Good</button>
+      <button data-filter="3" class="filter-btn">Easy</button>
     </div>
 
-    <div id="statusBar" class="text-center text-gray-500 text-xs mb-4">加载词库中...</div>
-    <div id="wordsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+    <!-- Sort Controls -->
+    <div class="sort-bar" id="sortBar">
+      <span class="sort-label"><i class="fas fa-sort-amount-down"></i> 排序</span>
+      <div class="sort-group">
+        <button class="sort-btn active" data-sort="default"><i class="fas fa-list-ol"></i> 默认</button>
+        <button class="sort-btn" data-sort="shuffle"><i class="fas fa-shuffle"></i> 打乱</button>
+        <button class="sort-btn" data-sort="similar"><i class="fas fa-spell-check"></i> 近似拼写</button>
+      </div>
+    </div>
 
-    <div id="quizPanel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-2xl max-w-lg w-full shadow-xl overflow-hidden">
-        <div class="bg-indigo-600 px-5 py-3 flex justify-between items-center">
-          <h3 class="text-white font-bold"><i class="fas fa-puzzle-piece mr-2"></i>词汇测验</h3>
-          <button id="closeQuizBtn" class="text-white text-xl">&times;</button>
+    <!-- Search -->
+    <div class="search-wrap">
+      <i class="fas fa-search"></i>
+      <input id="searchInput" type="text" placeholder="搜索单词、释义或例句…">
+    </div>
+
+    <!-- Status -->
+    <div id="statusBar">加载词库中…</div>
+
+    <!-- Grid -->
+    <div id="wordsGrid"></div>
+
+    <!-- Quiz Modal -->
+    <div id="quizPanel" class="hidden">
+      <div class="quiz-card">
+        <div class="quiz-header">
+          <h3><i class="fas fa-bolt"></i> 词汇测验</h3>
+          <button id="closeQuizBtn" class="quiz-close">&times;</button>
         </div>
-        <div class="p-5">
-          <div class="text-sm text-gray-500 mb-2 flex justify-between">
-            <span>📘 错题本: <span id="mistakeCount">0</span></span>
-            <span>🎯 <span id="quizRangeLabel">全部</span></span>
+        <div class="quiz-body">
+          <div class="quiz-meta">
+            <span><i class="fas fa-times-circle" style="color:var(--red)"></i> 错题本：<strong id="mistakeCount">0</strong></span>
+            <span><i class="fas fa-filter" style="color:var(--accent)"></i> 范围：<strong id="quizRangeLabel">全部</strong></span>
           </div>
-          <div class="bg-gray-50 rounded-xl p-5 text-center">
-            <div class="text-2xl font-bold text-indigo-800 mb-2" id="quizWord">---</div>
-            <div id="quizOptions" class="grid grid-cols-1 gap-2 mt-3"></div>
+          <div class="quiz-word-box">
+            <div id="quizWord">—</div>
           </div>
-          <div class="flex justify-between items-center mt-4">
-            <div id="quizFeedback" class="text-xs"></div>
-            <button id="nextQuizBtn" class="px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm">下一题 →</button>
+          <div id="quizOptions"></div>
+          <div class="quiz-footer">
+            <div id="quizFeedback"></div>
+            <button id="nextQuizBtn">下一题 →</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <input type="file" id="csvFileInput" accept=".csv" class="hidden">
-  <input type="file" id="progressFileInput" accept=".json" class="hidden">
+  <input type="file" id="csvFileInput" accept=".csv" style="display:none">
+  <input type="file" id="progressFileInput" accept=".json" style="display:none">
 
   <script>
     (function(){
-      // ---------- 数据存储（初始化时优先读取本地存储） ----------
-      let allWords = [];          // [{ word, pos, definition, example }]
-      let progress = JSON.parse(localStorage.getItem("SAT_local_progress")) || {};         // { word: { level:0-3, timestamp } }
-      let mistakes = JSON.parse(localStorage.getItem("SAT_local_mistakes")) || {};         // { word: errorCount }
+      // ─── Theme & Font persistence ───
+      const savedTheme = localStorage.getItem("SAT_theme") || "dark";
+      const savedFont  = localStorage.getItem("SAT_font")  || "1";
+      applyTheme(savedTheme);
+      applyFont(savedFont);
+
+      function applyTheme(t) {
+        document.documentElement.setAttribute("data-theme", t);
+        document.querySelectorAll("[data-theme-btn]").forEach(b => {
+          b.classList.toggle("active", b.getAttribute("data-theme-btn") === t);
+        });
+        localStorage.setItem("SAT_theme", t);
+      }
+
+      function applyFont(f) {
+        document.documentElement.setAttribute("data-font", f);
+        document.querySelectorAll("[data-font]").forEach(b => {
+          b.classList.toggle("active", b.getAttribute("data-font") === f);
+        });
+        localStorage.setItem("SAT_font", f);
+      }
+
+      document.getElementById("themeGroup").addEventListener("click", e => {
+        const btn = e.target.closest("[data-theme-btn]");
+        if (btn) applyTheme(btn.getAttribute("data-theme-btn"));
+      });
+
+      document.getElementById("fontGroup").addEventListener("click", e => {
+        const btn = e.target.closest("[data-font]");
+        if (btn) applyFont(btn.getAttribute("data-font"));
+      });
+
+      // ─── App state ───
+      let allWords = [];
+      let progress = JSON.parse(localStorage.getItem("SAT_local_progress")) || {};
+      let mistakes  = JSON.parse(localStorage.getItem("SAT_local_mistakes")) || {};
       let currentFilter = "all";
-      let searchText = "";
-      
-      let isQuizActive = false;
+      let searchText    = "";
+      let currentSort   = "default";  // "default" | "shuffle" | "similar"
+      let shuffledOrder = [];          // snapshot used while shuffle is active
+      let isQuizActive  = false;
       let currentQuizWord = null;
       let quizRange = "all";
-      
+
       const REMOTE_URL = "https://raw.githubusercontent.com/alecaloha/Eng/main/1000.csv";
 
-      // ---------- 辅助函数 ----------
+      // ─── Sort helpers ───
+
+      // Fisher-Yates shuffle of an array (returns new array)
+      function fisherYates(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
+      // Edit-distance (Levenshtein) between two strings
+      function editDistance(a, b) {
+        const m = a.length, n = b.length;
+        const dp = Array.from({length: m+1}, (_, i) => Array.from({length: n+1}, (_, j) => i === 0 ? j : j === 0 ? i : 0));
+        for (let i = 1; i <= m; i++)
+          for (let j = 1; j <= n; j++)
+            dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+        return dp[m][n];
+      }
+
+      // Group words by near-spelling clusters using a greedy approach:
+      // Sort alphabetically first, then group consecutive words that share
+      // a 3-char prefix OR have edit distance ≤ 3 with the cluster seed.
+      function similarSpellingSort(words) {
+        if (words.length === 0) return [];
+        // Start with alphabetical order as the backbone
+        const sorted = [...words].sort((a, b) => a.word.toLowerCase().localeCompare(b.word.toLowerCase()));
+
+        const clusters = [];    // array of {seed, words[]}
+        const used = new Set();
+
+        for (const w of sorted) {
+          if (used.has(w.word)) continue;
+          // find best cluster
+          let placed = false;
+          for (const cluster of clusters) {
+            const seed = cluster.seed.toLowerCase();
+            const wl   = w.word.toLowerCase();
+            const samePrefix = seed.slice(0, 3) === wl.slice(0, 3);
+            const close = editDistance(seed, wl) <= Math.max(2, Math.floor(Math.max(seed.length, wl.length) * 0.4));
+            if (samePrefix || close) {
+              cluster.words.push(w);
+              used.add(w.word);
+              placed = true;
+              break;
+            }
+          }
+          if (!placed) {
+            clusters.push({ seed: w.word, words: [w] });
+            used.add(w.word);
+          }
+        }
+
+        return clusters;
+      }
+
+      function applySortToWords(words) {
+        if (currentSort === "shuffle") {
+          // Build / reuse a stable shuffled order so re-renders don't re-shuffle
+          const wordSet = new Set(words.map(w => w.word));
+          // Keep existing shuffled order for words still in view, append new ones
+          const existing = shuffledOrder.filter(w => wordSet.has(w.word));
+          const existingSet = new Set(existing.map(w => w.word));
+          const newOnes = fisherYates(words.filter(w => !existingSet.has(w.word)));
+          shuffledOrder = [...existing, ...newOnes];
+          return shuffledOrder;
+        }
+        if (currentSort === "similar") {
+          return words; // clusters handled in render
+        }
+        return words; // default: original order
+      }
+
       function escapeHtml(str) {
         if (!str) return "";
         return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;');
@@ -97,19 +987,16 @@
 
       function updateUI() {
         const status = document.getElementById("statusBar");
-        if (status) {
-          const filteredCount = getFilteredWords().length;
-          status.innerHTML = `📚 共 ${allWords.length} 词 · 显示 ${filteredCount}`;
-        }
-        const mistakeSpan = document.getElementById("mistakeCount");
-        if (mistakeSpan && !isQuizActive) mistakeSpan.innerText = Object.keys(mistakes).length;
+        if (status) status.innerHTML = `📚 共 ${allWords.length} 词 · 显示 ${getFilteredWords().length}`;
+        const ms = document.getElementById("mistakeCount");
+        if (ms && !isQuizActive) ms.innerText = Object.keys(mistakes).length;
       }
 
       function getFilteredWords() {
         let filtered = [...allWords];
         if (searchText.trim()) {
           const kw = searchText.trim().toLowerCase();
-          filtered = filtered.filter(w => 
+          filtered = filtered.filter(w =>
             w.word.toLowerCase().includes(kw) ||
             w.definition.toLowerCase().includes(kw) ||
             w.example.toLowerCase().includes(kw)
@@ -119,66 +1006,92 @@
           filtered = filtered.filter(w => !progress[w.word]);
         } else if (currentFilter !== "all") {
           const lvl = parseInt(currentFilter);
-          filtered = filtered.filter(w => {
-            const p = progress[w.word];
-            return p && p.level === lvl;
-          });
+          filtered = filtered.filter(w => { const p=progress[w.word]; return p && p.level===lvl; });
         }
         return filtered;
       }
 
       function render() {
         const container = document.getElementById("wordsGrid");
-        const words = getFilteredWords();
+        let words = getFilteredWords();
+
+        document.querySelectorAll(".filter-btn").forEach(btn => {
+          btn.classList.toggle("active-filter", btn.getAttribute("data-filter") === currentFilter);
+        });
+        document.querySelectorAll(".sort-btn").forEach(btn => {
+          btn.classList.toggle("active", btn.getAttribute("data-sort") === currentSort);
+        });
+
         if (!words.length) {
-          container.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2"></i><p>暂无单词，请导入CSV</p></div>`;
-          updateUI();
-          return;
+          container.innerHTML = `<div class="empty-state"><i class="fas fa-layer-group"></i><p>暂无单词，请导入 CSV 文件</p></div>`;
+          container.className = "";
+          updateUI(); return;
         }
-        let html = "";
-        for (let w of words) {
-          const p = progress[w.word] || { level: -1 };
-          const level = p.level;
-          let statusText = level===-1?"未练习":(level===0?"Again":level===1?"Hard":level===2?"Good":"Easy");
-          let statusColor = level===-1?"bg-gray-100 text-gray-600":(level===0?"bg-red-100 text-red-700":level===1?"bg-orange-100 text-orange-700":level===2?"bg-yellow-100 text-yellow-700":"bg-green-100 text-green-700");
-          html += `
-            <div class="word-card bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow transition">
-              <div class="flex justify-between items-start">
-                <div class="speak-trigger cursor-pointer" data-word="${escapeHtml(w.word)}">
-                  <span class="text-xl font-bold text-indigo-800">${escapeHtml(w.word)}</span>
-                  <span class="ml-1 text-xs px-2 py-0.5 bg-indigo-100 rounded-full">${escapeHtml(w.pos)}</span>
+
+        const statusLabels  = {'-1':'未练习','0':'Again','1':'Hard','2':'Good','3':'Easy'};
+        const statusClasses = {'-1':'status-unlearned','0':'status-0','1':'status-1','2':'status-2','3':'status-3'};
+
+        function cardHtml(w, idx) {
+          const level = (progress[w.word] || {level:-1}).level;
+          const delay = Math.min(idx * 0.022, 0.38).toFixed(3);
+          return `
+            <div class="word-card" style="animation-delay:${delay}s">
+              <div class="card-top">
+                <div class="word-info">
+                  <span class="word-text speak-trigger" data-word="${escapeHtml(w.word)}">${escapeHtml(w.word)}</span>
+                  <span class="word-pos">${escapeHtml(w.pos)}</span>
                 </div>
-                <button class="speak-trigger text-indigo-400 hover:text-indigo-600" data-word="${escapeHtml(w.word)}"><i class="fas fa-volume-up"></i></button>
+                <button class="speak-btn speak-trigger" data-word="${escapeHtml(w.word)}"><i class="fas fa-volume-up"></i></button>
               </div>
-              <p class="mt-2 text-sm text-gray-700">${escapeHtml(w.definition)}</p>
-              <p class="mt-1 text-xs italic text-gray-500">“${escapeHtml(w.example)}”</p>
-              <div class="mt-2 flex justify-between items-center">
-                <span class="text-xs px-2 py-0.5 rounded-full ${statusColor}">${statusText}</span>
+              <p class="word-def">${escapeHtml(w.definition)}</p>
+              <p class="word-example">${escapeHtml(w.example)}</p>
+              <div class="card-footer">
+                <div class="status-row">
+                  <span class="status-badge ${statusClasses[level]||'status-unlearned'}">${statusLabels[level]||'未练习'}</span>
+                </div>
+                <div class="rate-row">
+                  <button data-word="${escapeHtml(w.word)}" data-level="0" class="rate-btn">Again</button>
+                  <button data-word="${escapeHtml(w.word)}" data-level="1" class="rate-btn">Hard</button>
+                  <button data-word="${escapeHtml(w.word)}" data-level="2" class="rate-btn">Good</button>
+                  <button data-word="${escapeHtml(w.word)}" data-level="3" class="rate-btn">Easy</button>
+                </div>
               </div>
-              <div class="grid grid-cols-4 gap-1 mt-2">
-                <button data-word="${escapeHtml(w.word)}" data-level="0" class="rate-btn py-1 text-xs rounded-lg bg-red-100 hover:bg-red-200">Again</button>
-                <button data-word="${escapeHtml(w.word)}" data-level="1" class="rate-btn py-1 text-xs rounded-lg bg-orange-100 hover:bg-orange-200">Hard</button>
-                <button data-word="${escapeHtml(w.word)}" data-level="2" class="rate-btn py-1 text-xs rounded-lg bg-yellow-100 hover:bg-yellow-200">Good</button>
-                <button data-word="${escapeHtml(w.word)}" data-level="3" class="rate-btn py-1 text-xs rounded-lg bg-green-100 hover:bg-green-200">Easy</button>
-              </div>
-            </div>
-          `;
+            </div>`;
         }
-        container.innerHTML = html;
+
+        if (currentSort === "similar") {
+          container.className = "";
+          const clusters = similarSpellingSort(words);
+          let html = "";
+          let gi = 0;
+          clusters.forEach(cluster => {
+            const prefix = cluster.seed.slice(0, 3).toUpperCase();
+            html += `<div class="cluster-divider">
+              <div class="cluster-divider-line"></div>
+              <span class="cluster-divider-label">${escapeHtml(prefix)}…</span>
+              <div class="cluster-divider-line"></div>
+            </div>`;
+            cluster.words.forEach(w => { html += cardHtml(w, gi++); });
+          });
+          container.innerHTML = html;
+        } else if (currentSort === "shuffle") {
+          container.className = "sort-shuffle";
+          words = applySortToWords(words);
+          container.innerHTML = words.map((w, i) => cardHtml(w, i)).join("");
+        } else {
+          container.className = "";
+          container.innerHTML = words.map((w, i) => cardHtml(w, i)).join("");
+        }
+
         updateUI();
       }
 
       function rateWord(word, level) {
         if (!word) return;
-        progress[word] = { level: level, timestamp: Date.now() };
-        
-        // 【新增】打分时，同步保存进度到本地
+        progress[word] = { level, timestamp: Date.now() };
         localStorage.setItem("SAT_local_progress", JSON.stringify(progress));
-        
         render();
-        if (isQuizActive && currentQuizWord && currentQuizWord.word === word) {
-          loadNextQuiz();
-        }
+        if (isQuizActive && currentQuizWord && currentQuizWord.word === word) loadNextQuiz();
       }
 
       function speak(word) {
@@ -189,7 +1102,6 @@
         speechSynthesis.speak(u);
       }
 
-      // ---------- 远程加载默认词库 ----------
       async function fetchRemoteIfEmpty() {
         if (allWords.length > 0) return;
         try {
@@ -199,322 +1111,210 @@
           const lines = text.split(/\r?\n/).filter(l => l.trim());
           if (lines.length < 2) return;
           function parseRow(row) {
-            const result = [];
-            let inQuote = false, cur = "";
-            for (let i=0; i<row.length; i++) {
-              const ch = row[i];
-              if (ch === '"') {
-                if (inQuote && row[i+1]==='"') { cur+='"'; i++; }
-                else inQuote = !inQuote;
-              } else if (ch === ',' && !inQuote) {
-                result.push(cur.trim());
-                cur = "";
-              } else cur += ch;
+            const result=[]; let inQ=false, cur="";
+            for (let i=0;i<row.length;i++) {
+              const ch=row[i];
+              if(ch==='"'){ if(inQ && row[i+1]==='"'){cur+='"';i++;}else inQ=!inQ; }
+              else if(ch===',' && !inQ){ result.push(cur.trim()); cur=""; }
+              else cur+=ch;
             }
             result.push(cur.trim());
-            return result.map(c => c.replace(/^"|"$/g, '').trim());
+            return result.map(c=>c.replace(/^"|"$/g,'').trim());
           }
-          const newWords = [];
-          for (let i=1; i<lines.length; i++) {
-            const cols = parseRow(lines[i]);
-            if (cols.length >= 4 && cols[0]) {
-              newWords.push({
-                word: cols[0],
-                pos: cols[1] || "",
-                definition: cols[2] || "",
-                example: cols[3] || ""
-              });
-            }
+          const newWords=[];
+          for(let i=1;i<lines.length;i++){
+            const cols=parseRow(lines[i]);
+            if(cols.length>=4 && cols[0]) newWords.push({word:cols[0],pos:cols[1]||"",definition:cols[2]||"",example:cols[3]||""});
           }
-          if (newWords.length) {
-            allWords = newWords;
-            // 下载完后，把词库也缓存在本地
-            localStorage.setItem("SAT_local_words", JSON.stringify(allWords));
-            render();
-          }
-        } catch(e) { console.warn("自动加载失败", e); }
+          if(newWords.length){ allWords=newWords; localStorage.setItem("SAT_local_words",JSON.stringify(allWords)); render(); }
+        } catch(e){ console.warn("自动加载失败",e); }
       }
 
-      // 手动导入 CSV（添加新单词，不覆盖）
       function importCSV(file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const lines = e.target.result.split(/\r?\n/).filter(l=>l.trim());
-          if (lines.length<2) { alert("CSV格式错误"); return; }
-          let added = 0;
-          const existing = new Set(allWords.map(w=>w.word.toLowerCase()));
-          function parseRow(row) {
-            const res=[]; let inQ=false, cur="";
+        const reader=new FileReader();
+        reader.onload=function(e){
+          const lines=e.target.result.split(/\r?\n/).filter(l=>l.trim());
+          if(lines.length<2){ alert("CSV格式错误"); return; }
+          let added=0;
+          const existing=new Set(allWords.map(w=>w.word.toLowerCase()));
+          function parseRow(row){
+            const res=[]; let inQ=false,cur="";
             for(let i=0;i<row.length;i++){
               const ch=row[i];
-              if(ch==='"'){
-                if(inQ && row[i+1]==='"'){ cur+='"'; i++; }
-                else inQ=!inQ;
-              } else if(ch===',' && !inQ){
-                res.push(cur.trim()); cur="";
-              } else cur+=ch;
+              if(ch==='"'){if(inQ && row[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+              else if(ch===',' && !inQ){res.push(cur.trim());cur="";}
+              else cur+=ch;
             }
             res.push(cur.trim());
             return res.map(c=>c.replace(/^"|"$/g,'').trim());
           }
-          const start = lines[0].toLowerCase().includes("word")?1:0;
+          const start=lines[0].toLowerCase().includes("word")?1:0;
           for(let i=start;i<lines.length;i++){
-            const cols = parseRow(lines[i]);
+            const cols=parseRow(lines[i]);
             if(cols.length>=4 && cols[0] && !existing.has(cols[0].toLowerCase())){
-              allWords.push({
-                word: cols[0],
-                pos: cols[1]||"",
-                definition: cols[2]||"",
-                example: cols[3]||""
-              });
-              existing.add(cols[0].toLowerCase());
-              added++;
+              allWords.push({word:cols[0],pos:cols[1]||"",definition:cols[2]||"",example:cols[3]||""});
+              existing.add(cols[0].toLowerCase()); added++;
             }
           }
-          if(added){ 
-            // 导入新词后更新本地词库缓存
-            localStorage.setItem("SAT_local_words", JSON.stringify(allWords));
-            render(); 
-            alert(`✅ 添加 ${added} 个单词`); 
-          }
+          if(added){ localStorage.setItem("SAT_local_words",JSON.stringify(allWords)); render(); alert(`✅ 添加 ${added} 个单词`); }
           else alert("没有新单词或格式不对");
         };
         reader.readAsText(file,"UTF-8");
       }
 
-      // ---------- 手动导出/导入进度（JSON）----------
       function exportProgress() {
-        const data = {
-          words: allWords,
-          progress: progress,
-          mistakes: mistakes,
-          exportTime: new Date().toISOString()
-        };
-        const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `SAT_progress_${new Date().toISOString().slice(0,19)}.json`;
-        a.click();
-        URL.revokeObjectURL(a.href);
+        const data={words:allWords,progress,mistakes,exportTime:new Date().toISOString()};
+        const a=document.createElement("a");
+        a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));
+        a.download=`SAT_progress_${new Date().toISOString().slice(0,19)}.json`;
+        a.click(); URL.revokeObjectURL(a.href);
         alert("进度已导出，请妥善保存此文件");
       }
 
       function importProgress(file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          try {
-            const data = JSON.parse(e.target.result);
-            if (data.words && Array.isArray(data.words)) allWords = data.words;
-            if (data.progress && typeof data.progress === "object") progress = data.progress;
-            if (data.mistakes && typeof data.mistakes === "object") mistakes = data.mistakes;
-            
-            // 【新增】手动导入成功后，强制覆盖更新本地 localStorage 缓存
-            localStorage.setItem("SAT_local_words", JSON.stringify(allWords));
-            localStorage.setItem("SAT_local_progress", JSON.stringify(progress));
-            localStorage.setItem("SAT_local_mistakes", JSON.stringify(mistakes));
-            
-            render();
-            alert("进度导入成功！当前词库及熟练度已同步至浏览器本地");
-          } catch(err) {
-            alert("文件格式错误，请选择正确的 JSON 进度文件");
-          }
+        const reader=new FileReader();
+        reader.onload=function(e){
+          try{
+            const data=JSON.parse(e.target.result);
+            if(data.words && Array.isArray(data.words)) allWords=data.words;
+            if(data.progress && typeof data.progress==="object") progress=data.progress;
+            if(data.mistakes && typeof data.mistakes==="object") mistakes=data.mistakes;
+            localStorage.setItem("SAT_local_words",JSON.stringify(allWords));
+            localStorage.setItem("SAT_local_progress",JSON.stringify(progress));
+            localStorage.setItem("SAT_local_mistakes",JSON.stringify(mistakes));
+            render(); alert("进度导入成功！");
+          }catch(err){ alert("文件格式错误，请选择正确的 JSON 进度文件"); }
         };
-        reader.readAsText(file, "UTF-8");
+        reader.readAsText(file,"UTF-8");
       }
 
-      // 导出 Anki CSV
       function exportAnki() {
         if(!allWords.length){ alert("无单词"); return; }
-        let rows = ["Front;Back"];
+        let rows=["Front;Back"];
         for(let w of allWords){
-          let back = `${w.word} ${w.pos}\\n${w.definition}\\n\\n例: ${w.example}`;
+          let back=`${w.word} ${w.pos}\\n${w.definition}\\n\\n例: ${w.example}`;
           rows.push(`"${w.word.replace(/"/g,'""')}";"${back.replace(/"/g,'""')}"`);
         }
-        const blob = new Blob(["\uFEFF"+rows.join("\n")], {type:"text/csv"});
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `SAT1000_Anki_${new Date().toISOString().slice(0,10)}.csv`;
-        a.click();
-        URL.revokeObjectURL(a.href);
+        const a=document.createElement("a");
+        a.href=URL.createObjectURL(new Blob(["\uFEFF"+rows.join("\n")],{type:"text/csv"}));
+        a.download=`SAT1000_Anki_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click(); URL.revokeObjectURL(a.href);
       }
 
-      // ---------- 测验逻辑 ----------
+      // ─── Quiz ───
       function getQuizCandidates(range) {
-        let candidates = [];
-        if (range === "all") candidates = [...allWords];
-        else if (range === "unlearned") candidates = allWords.filter(w=>!progress[w.word]);
-        else if (["0","1","2","3"].includes(range)) {
-          const lvl = parseInt(range);
-          candidates = allWords.filter(w=>{
-            const p=progress[w.word];
-            return p && p.level===lvl;
-          });
-        }
-        if (!candidates.length) return [];
-        let weighted = [];
-        for(let w of candidates){
-          let err = mistakes[w.word]||0;
-          let weight = 1 + err*2;
-          for(let i=0;i<weight;i++) weighted.push(w);
-        }
-        for(let i=weighted.length-1;i>0;i--){
-          let j=Math.floor(Math.random()*(i+1));
-          [weighted[i], weighted[j]] = [weighted[j], weighted[i]];
-        }
+        let cands=range==="all"?[...allWords]:range==="unlearned"?allWords.filter(w=>!progress[w.word]):["0","1","2","3"].includes(range)?allWords.filter(w=>{const p=progress[w.word];return p&&p.level===parseInt(range);}):[...allWords];
+        if(!cands.length) return [];
+        let weighted=[];
+        for(let w of cands){ let err=mistakes[w.word]||0; for(let i=0;i<1+err*2;i++) weighted.push(w); }
+        for(let i=weighted.length-1;i>0;i--){ let j=Math.floor(Math.random()*(i+1)); [weighted[i],weighted[j]]=[weighted[j],weighted[i]]; }
         return weighted;
       }
 
-      function generateOptions(correctWord) {
-        let others = allWords.filter(w=>w.word !== correctWord.word);
-        let otherDefs = [];
-        if(others.length){
-          let shuffled = [...others];
-          for(let i=shuffled.length-1;i>0;i--){
-            let j=Math.floor(Math.random()*(i+1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-          }
-          for(let i=0;i<Math.min(3,shuffled.length);i++) otherDefs.push(shuffled[i].definition);
-        }
-        while(otherDefs.length<3) otherDefs.push("(暂无其他释义)");
-        let opts = [
-          { def: correctWord.definition, correct: true },
-          { def: otherDefs[0], correct: false },
-          { def: otherDefs[1], correct: false },
-          { def: otherDefs[2], correct: false }
-        ];
-        for(let i=opts.length-1;i>0;i--){
-          let j=Math.floor(Math.random()*(i+1));
-          [opts[i], opts[j]] = [opts[j], opts[i]];
-        }
+      function generateOptions(cw) {
+        let others=allWords.filter(w=>w.word!==cw.word);
+        let shuffled=[...others];
+        for(let i=shuffled.length-1;i>0;i--){ let j=Math.floor(Math.random()*(i+1)); [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
+        let defs=shuffled.slice(0,3).map(w=>w.definition);
+        while(defs.length<3) defs.push("(暂无其他释义)");
+        let opts=[{def:cw.definition,correct:true},{def:defs[0],correct:false},{def:defs[1],correct:false},{def:defs[2],correct:false}];
+        for(let i=opts.length-1;i>0;i--){ let j=Math.floor(Math.random()*(i+1)); [opts[i],opts[j]]=[opts[j],opts[i]]; }
         return opts;
       }
 
       function renderQuiz(word, opts) {
-        document.getElementById("quizWord").innerHTML = escapeHtml(word.word);
-        const container = document.getElementById("quizOptions");
-        container.innerHTML = "";
+        document.getElementById("quizWord").innerHTML=escapeHtml(word.word);
+        const container=document.getElementById("quizOptions");
+        container.innerHTML="";
         opts.forEach((opt,idx)=>{
-          const btn = document.createElement("div");
-          btn.className = "quiz-option bg-gray-100 rounded-lg p-2 text-sm hover:bg-indigo-100";
-          btn.innerHTML = `<span class="font-mono mr-2">${String.fromCharCode(65+idx)}.</span> ${escapeHtml(opt.def)}`;
-          btn.onclick = () => handleAnswer(opt.correct, word);
+          const btn=document.createElement("div");
+          btn.className="quiz-option";
+          btn.innerHTML=`<span class="opt-label">${String.fromCharCode(65+idx)}</span><span>${escapeHtml(opt.def)}</span>`;
+          btn.onclick=()=>handleAnswer(opt.correct,word);
           container.appendChild(btn);
         });
-        document.getElementById("quizFeedback").innerHTML = "";
+        document.getElementById("quizFeedback").innerHTML="";
       }
 
-      function handleAnswer(isCorrect, wordObj) {
+      function handleAnswer(isCorrect,wordObj) {
         if(!isCorrect){
-          mistakes[wordObj.word] = (mistakes[wordObj.word]||0) + 1;
-          
-          // 【新增】错题增加时，自动保存错题本到本地
-          localStorage.setItem("SAT_local_mistakes", JSON.stringify(mistakes));
-          
-          document.getElementById("quizFeedback").innerHTML = `<span class="text-red-600">✗ 错误！正确：${escapeHtml(wordObj.definition)}</span>`;
+          mistakes[wordObj.word]=(mistakes[wordObj.word]||0)+1;
+          localStorage.setItem("SAT_local_mistakes",JSON.stringify(mistakes));
+          document.getElementById("quizFeedback").innerHTML=`<span class="wrong"><i class="fas fa-times-circle"></i> 错误！正确：${escapeHtml(wordObj.definition)}</span>`;
           speak(wordObj.word);
         } else {
-          document.getElementById("quizFeedback").innerHTML = `<span class="text-green-600">✓ 正确！</span>`;
+          document.getElementById("quizFeedback").innerHTML=`<span class="correct"><i class="fas fa-check-circle"></i> 正确！</span>`;
         }
-        document.querySelectorAll(".quiz-option").forEach(opt=>opt.style.pointerEvents="none");
+        document.querySelectorAll(".quiz-option").forEach(o=>o.style.pointerEvents="none");
         document.getElementById("nextQuizBtn").focus();
       }
 
       function loadNextQuiz() {
         if(!isQuizActive) return;
-        const candidates = getQuizCandidates(quizRange);
-        if(!candidates.length){
-          alert("当前范围无单词可测验");
-          closeQuiz();
-          return;
-        }
-        currentQuizWord = candidates[0];
-        const opts = generateOptions(currentQuizWord);
-        renderQuiz(currentQuizWord, opts);
-        document.querySelectorAll(".quiz-option").forEach(opt=>opt.style.pointerEvents="auto");
-      }
-
-      // ---------- 事件绑定 ----------
-      function bindEvents() {
-        document.querySelectorAll("#filterButtons .filter-btn").forEach(btn => {
-          btn.addEventListener("click", () => {
-            currentFilter = btn.getAttribute("data-filter");
-            render();
-          });
-        });
-        document.getElementById("searchInput").addEventListener("input", (e) => {
-          searchText = e.target.value;
-          render();
-        });
-        document.getElementById("importCsvBtn").addEventListener("click", () => document.getElementById("csvFileInput").click());
-        document.getElementById("csvFileInput").addEventListener("change", (e) => {
-          if(e.target.files.length) importCSV(e.target.files[0]);
-          e.target.value = "";
-        });
-        document.getElementById("exportProgressBtn").addEventListener("click", exportProgress);
-        document.getElementById("importProgressBtn").addEventListener("click", () => document.getElementById("progressFileInput").click());
-        document.getElementById("progressFileInput").addEventListener("change", (e) => {
-          if(e.target.files.length) importProgress(e.target.files[0]);
-          e.target.value = "";
-        });
-        document.getElementById("exportAnkiBtn").addEventListener("click", exportAnki);
-        document.getElementById("startQuizBtn").addEventListener("click", () => startQuiz(currentFilter === "all" ? "all" : currentFilter));
-        document.getElementById("closeQuizBtn").addEventListener("click", closeQuiz);
-        document.getElementById("nextQuizBtn").addEventListener("click", loadNextQuiz);
-        
-        document.getElementById("wordsGrid").addEventListener("click", (e) => {
-          let speakBtn = e.target.closest(".speak-trigger");
-          if(speakBtn){
-            let w = speakBtn.getAttribute("data-word");
-            if(w) speak(w);
-            e.preventDefault();
-            return;
-          }
-          let rateBtn = e.target.closest(".rate-btn");
-          if(rateBtn){
-            let w = rateBtn.getAttribute("data-word");
-            let lvl = rateBtn.getAttribute("data-level");
-            if(w && lvl!==null) rateWord(w, parseInt(lvl));
-            e.preventDefault();
-          }
-        });
+        const cands=getQuizCandidates(quizRange);
+        if(!cands.length){ alert("当前范围无单词可测验"); closeQuiz(); return; }
+        currentQuizWord=cands[0];
+        renderQuiz(currentQuizWord, generateOptions(currentQuizWord));
+        document.querySelectorAll(".quiz-option").forEach(o=>o.style.pointerEvents="auto");
       }
 
       function startQuiz(range) {
-        quizRange = range;
-        isQuizActive = true;
-        document.getElementById("quizRangeLabel").innerText = 
-          range==="all"?"全部":range==="unlearned"?"未练习":(range==="0"?"Again":range==="1"?"Hard":range==="2"?"Good":"Easy");
-        document.getElementById("mistakeCount").innerText = Object.keys(mistakes).length;
+        quizRange=range; isQuizActive=true;
+        const labels={all:"全部",unlearned:"未练习","0":"Again","1":"Hard","2":"Good","3":"Easy"};
+        document.getElementById("quizRangeLabel").innerText=labels[range]||"全部";
+        document.getElementById("mistakeCount").innerText=Object.keys(mistakes).length;
         document.getElementById("quizPanel").classList.remove("hidden");
         loadNextQuiz();
       }
 
       function closeQuiz() {
-        isQuizActive = false;
+        isQuizActive=false;
         document.getElementById("quizPanel").classList.add("hidden");
         render();
       }
 
-      // 【全面优化】启动逻辑
-      async function init() {
-        // 1. 优先尝试从本地缓存恢复历史词库，避免每次都请求网络
-        const localWords = localStorage.getItem("SAT_local_words");
-        if (localWords) {
-          try {
-            allWords = JSON.parse(localWords);
-          } catch(e) {
-            allWords = [];
+      function bindEvents() {
+        document.querySelectorAll("#filterButtons .filter-btn").forEach(btn=>{
+          btn.addEventListener("click",()=>{ currentFilter=btn.getAttribute("data-filter"); render(); });
+        });
+        // Sort buttons
+        document.getElementById("sortBar").addEventListener("click", e => {
+          const btn = e.target.closest(".sort-btn");
+          if (!btn) return;
+          const newSort = btn.getAttribute("data-sort");
+          if (newSort === "shuffle") {
+            // Always re-shuffle when clicking shuffle again
+            shuffledOrder = [];
           }
-        }
-        
-        // 2. 如果本地没有词库缓存，才去获取远程默认词库
-        if (allWords.length === 0) {
-          await fetchRemoteIfEmpty();
-        }
-        
+          currentSort = newSort;
+          render();
+        });
+        document.getElementById("searchInput").addEventListener("input",e=>{ searchText=e.target.value; render(); });
+        document.getElementById("importCsvBtn").addEventListener("click",()=>document.getElementById("csvFileInput").click());
+        document.getElementById("csvFileInput").addEventListener("change",e=>{ if(e.target.files.length) importCSV(e.target.files[0]); e.target.value=""; });
+        document.getElementById("exportProgressBtn").addEventListener("click",exportProgress);
+        document.getElementById("importProgressBtn").addEventListener("click",()=>document.getElementById("progressFileInput").click());
+        document.getElementById("progressFileInput").addEventListener("change",e=>{ if(e.target.files.length) importProgress(e.target.files[0]); e.target.value=""; });
+        document.getElementById("exportAnkiBtn").addEventListener("click",exportAnki);
+        document.getElementById("startQuizBtn").addEventListener("click",()=>startQuiz(currentFilter==="all"?"all":currentFilter));
+        document.getElementById("closeQuizBtn").addEventListener("click",closeQuiz);
+        document.getElementById("nextQuizBtn").addEventListener("click",loadNextQuiz);
+        document.getElementById("wordsGrid").addEventListener("click",e=>{
+          const sp=e.target.closest(".speak-trigger");
+          if(sp){ speak(sp.getAttribute("data-word")); return; }
+          const rb=e.target.closest(".rate-btn");
+          if(rb) rateWord(rb.getAttribute("data-word"),parseInt(rb.getAttribute("data-level")));
+        });
+      }
+
+      async function init() {
+        const lw=localStorage.getItem("SAT_local_words");
+        if(lw){ try{ allWords=JSON.parse(lw); }catch(e){ allWords=[]; } }
+        if(allWords.length===0) await fetchRemoteIfEmpty();
         render();
         bindEvents();
       }
+
       init();
     })();
   </script>
