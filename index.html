@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAT 1000 · 可靠进度版</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .word-card { transition: 0.2s; border-radius: 1.5rem; }
+    .word-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -12px rgba(0,0,0,0.2); }
+    .active-filter { background-color: #4f46e5 !important; color: white !important; }
+    .quiz-option { transition: 0.1s; cursor: pointer; }
+    .quiz-option:hover { background-color: #e0e7ff; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-indigo-50 min-h-screen">
+
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="text-center mb-6">
+      <h1 class="text-4xl font-bold text-indigo-700">SAT 1000</h1>
+      <p class="text-gray-500 text-sm">标记熟练度 · 错题优先 · 手动保存进度</p>
+    </div>
+
+    <!-- 工具栏 -->
+    <div class="flex flex-wrap gap-2 justify-center mb-6">
+      <button id="importCsvBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm shadow"><i class="fas fa-upload mr-1"></i>导入CSV</button>
+      <button id="exportProgressBtn" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm shadow"><i class="fas fa-download mr-1"></i>导出进度</button>
+      <button id="importProgressBtn" class="px-4 py-2 bg-sky-600 text-white rounded-xl text-sm shadow"><i class="fas fa-upload mr-1"></i>导入进度</button>
+      <button id="exportAnkiBtn" class="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm shadow"><i class="fas fa-download mr-1"></i>导出Anki</button>
+      <button id="startQuizBtn" class="px-4 py-2 bg-rose-600 text-white rounded-xl text-sm shadow"><i class="fas fa-question-circle mr-1"></i>随机测验</button>
+    </div>
+
+    <!-- 筛选器 -->
+    <div class="flex flex-wrap gap-1 justify-center mb-5" id="filterButtons">
+      <button data-filter="all" class="filter-btn active-filter px-3 py-1.5 rounded-lg text-xs font-medium">全部</button>
+      <button data-filter="unlearned" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-100 text-purple-700">未练习</button>
+      <button data-filter="0" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-red-100 text-red-700">Again</button>
+      <button data-filter="1" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-100 text-orange-700">Hard</button>
+      <button data-filter="2" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-yellow-100 text-yellow-700">Good</button>
+      <button data-filter="3" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-green-100 text-green-700">Easy</button>
+    </div>
+
+    <!-- 搜索框 -->
+    <div class="relative max-w-md mx-auto mb-6">
+      <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+      <input id="searchInput" type="text" placeholder="搜索单词..." class="w-full pl-9 pr-3 py-2 rounded-full border border-gray-200 bg-white text-sm">
+    </div>
+
+    <!-- 状态栏 -->
+    <div id="statusBar" class="text-center text-gray-500 text-xs mb-4">加载默认词库中...</div>
+    <div id="wordsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+
+    <!-- 测验模态框 -->
+    <div id="quizPanel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-lg w-full shadow-xl overflow-hidden">
+        <div class="bg-indigo-600 px-5 py-3 flex justify-between items-center">
+          <h3 class="text-white font-bold"><i class="fas fa-puzzle-piece mr-2"></i>词汇测验</h3>
+          <button id="closeQuizBtn" class="text-white text-xl">&times;</button>
+        </div>
+        <div class="p-5">
+          <div class="text-sm text-gray-500 mb-2 flex justify-between">
+            <span>📘 错题本: <span id="mistakeCount">0</span></span>
+            <span>🎯 <span id="quizRangeLabel">全部</span></span>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-5 text-center">
+            <div class="text-2xl font-bold text-indigo-800 mb-2" id="quizWord">---</div>
+            <div id="quizOptions" class="grid grid-cols-1 gap-2 mt-3"></div>
+          </div>
+          <div class="flex justify-between items-center mt-4">
+            <div id="quizFeedback" class="text-xs"></div>
+            <button id="nextQuizBtn" class="px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm">下一题 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 隐藏文件输入 -->
+  <input type="file" id="csvFileInput" accept=".csv" class="hidden">
+  <input type="file" id="progressFileInput" accept=".json" class="hidden">
+
+  <script>
+    (function(){
+      // ---------- 所有数据存储在内存中 ----------
+      let allWords = [];          // [{ word, pos, definition, example }]
+      let progress = {};         // { word: { level:0-3, timestamp } }
+      let mistakes = {};         // { word: errorCount }
+      let currentFilter = "all";
+      let searchText = "";
+      
+      let isQuizActive = false;
+      let currentQuizWord = null;
+      let quizRange = "all";
+      
+      const REMOTE_URL = "https://raw.githubusercontent.com/alecaloha/Eng/main/1000.csv";
+
+      // ---------- 辅助函数 ----------
+      function escapeHtml(str) {
+        if (!str) return "";
+        return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;');
+      }
+
+      function updateUI() {
+        const status = document.getElementById("statusBar");
+        if (status) {
+          const filteredCount = getFilteredWords().length;
+          status.innerHTML = `📚 共 ${allWords.length} 词 · 显示 ${filteredCount}`;
+        }
+        const mistakeSpan = document.getElementById("mistakeCount");
+        if (mistakeSpan && !isQuizActive) mistakeSpan.innerText = Object.keys(mistakes).length;
+      }
+
+      function getFilteredWords() {
+        let filtered = [...allWords];
+        if (searchText.trim()) {
+          const kw = searchText.trim().toLowerCase();
+          filtered = filtered.filter(w => 
+            w.word.toLowerCase().includes(kw) ||
+            w.definition.toLowerCase().includes(kw) ||
+            w.example.toLowerCase().includes(kw)
+          );
+        }
+        if (currentFilter === "unlearned") {
+          filtered = filtered.filter(w => !progress[w.word]);
+        } else if (currentFilter !== "all") {
+          const lvl = parseInt(currentFilter);
+          filtered = filtered.filter(w => {
+            const p = progress[w.word];
+            return p && p.level === lvl;
+          });
+        }
+        return filtered;
+      }
+
+      function render() {
+        const container = document.getElementById("wordsGrid");
+        const words = getFilteredWords();
+        if (!words.length) {
+          container.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2"></i><p>暂无单词，请导入CSV</p></div>`;
+          updateUI();
+          return;
+        }
+        let html = "";
+        for (let w of words) {
+          const p = progress[w.word] || { level: -1 };
+          const level = p.level;
+          let statusText = level===-1?"未练习":(level===0?"Again":level===1?"Hard":level===2?"Good":"Easy");
+          let statusColor = level===-1?"bg-gray-100 text-gray-600":(level===0?"bg-red-100 text-red-700":level===1?"bg-orange-100 text-orange-700":level===2?"bg-yellow-100 text-yellow-700":"bg-green-100 text-green-700");
+          html += `
+            <div class="word-card bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow transition">
+              <div class="flex justify-between items-start">
+                <div class="speak-trigger cursor-pointer" data-word="${escapeHtml(w.word)}">
+                  <span class="text-xl font-bold text-indigo-800">${escapeHtml(w.word)}</span>
+                  <span class="ml-1 text-xs px-2 py-0.5 bg-indigo-100 rounded-full">${escapeHtml(w.pos)}</span>
+                </div>
+                <button class="speak-trigger text-indigo-400 hover:text-indigo-600" data-word="${escapeHtml(w.word)}"><i class="fas fa-volume-up"></i></button>
+              </div>
+              <p class="mt-2 text-sm text-gray-700">${escapeHtml(w.definition)}</p>
+              <p class="mt-1 text-xs italic text-gray-500">“${escapeHtml(w.example)}”</p>
+              <div class="mt-2 flex justify-between items-center">
+                <span class="text-xs px-2 py-0.5 rounded-full ${statusColor}">${statusText}</span>
+              </div>
+              <div class="grid grid-cols-4 gap-1 mt-2">
+                <button data-word="${escapeHtml(w.word)}" data-level="0" class="rate-btn py-1 text-xs rounded-lg bg-red-100 hover:bg-red-200">Again</button>
+                <button data-word="${escapeHtml(w.word)}" data-level="1" class="rate-btn py-1 text-xs rounded-lg bg-orange-100 hover:bg-orange-200">Hard</button>
+                <button data-word="${escapeHtml(w.word)}" data-level="2" class="rate-btn py-1 text-xs rounded-lg bg-yellow-100 hover:bg-yellow-200">Good</button>
+                <button data-word="${escapeHtml(w.word)}" data-level="3" class="rate-btn py-1 text-xs rounded-lg bg-green-100 hover:bg-green-200">Easy</button>
+              </div>
+            </div>
+          `;
+        }
+        container.innerHTML = html;
+        updateUI();
+      }
+
+      function rateWord(word, level) {
+        if (!word) return;
+        progress[word] = { level: level, timestamp: Date.now() };
+        render();
+        if (isQuizActive && currentQuizWord && currentQuizWord.word === word) {
+          loadNextQuiz();
+        }
+      }
+
+      function speak(word) {
+        if (!word) return;
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(word);
+        u.lang = "en-US";
+        speechSynthesis.speak(u);
+      }
+
+      // ---------- 远程加载默认词库（仅当 allWords 为空）----------
+      async function fetchRemoteIfEmpty() {
+        if (allWords.length > 0) return;
+        try {
+          const res = await fetch(REMOTE_URL);
+          if (!res.ok) throw new Error();
+          const text = await res.text();
+          const lines = text.split(/\r?\n/).filter(l => l.trim());
+          if (lines.length < 2) return;
+          function parseRow(row) {
+            const result = [];
+            let inQuote = false, cur = "";
+            for (let i=0; i<row.length; i++) {
+              const ch = row[i];
+              if (ch === '"') {
+                if (inQuote && row[i+1]==='"') { cur+='"'; i++; }
+                else inQuote = !inQuote;
+              } else if (ch === ',' && !inQuote) {
+                result.push(cur.trim());
+                cur = "";
+              } else cur += ch;
+            }
+            result.push(cur.trim());
+            return result.map(c => c.replace(/^"|"$/g, '').trim());
+          }
+          const newWords = [];
+          for (let i=1; i<lines.length; i++) {
+            const cols = parseRow(lines[i]);
+            if (cols.length >= 4 && cols[0]) {
+              newWords.push({
+                word: cols[0],
+                pos: cols[1] || "",
+                definition: cols[2] || "",
+                example: cols[3] || ""
+              });
+            }
+          }
+          if (newWords.length) {
+            allWords = newWords;
+            render();
+          }
+        } catch(e) { console.warn("自动加载失败", e); }
+      }
+
+      // 手动导入 CSV（添加新单词，不覆盖）
+      function importCSV(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const lines = e.target.result.split(/\r?\n/).filter(l=>l.trim());
+          if (lines.length<2) { alert("CSV格式错误"); return; }
+          let added = 0;
+          const existing = new Set(allWords.map(w=>w.word.toLowerCase()));
+          function parseRow(row) {
+            const res=[]; let inQ=false, cur="";
+            for(let i=0;i<row.length;i++){
+              const ch=row[i];
+              if(ch==='"'){
+                if(inQ && row[i+1]==='"'){ cur+='"'; i++; }
+                else inQ=!inQ;
+              } else if(ch===',' && !inQ){
+                res.push(cur.trim()); cur="";
+              } else cur+=ch;
+            }
+            res.push(cur.trim());
+            return res.map(c=>c.replace(/^"|"$/g,'').trim());
+          }
+          const start = lines[0].toLowerCase().includes("word")?1:0;
+          for(let i=start;i<lines.length;i++){
+            const cols = parseRow(lines[i]);
+            if(cols.length>=4 && cols[0] && !existing.has(cols[0].toLowerCase())){
+              allWords.push({
+                word: cols[0],
+                pos: cols[1]||"",
+                definition: cols[2]||"",
+                example: cols[3]||""
+              });
+              existing.add(cols[0].toLowerCase());
+              added++;
+            }
+          }
+          if(added){ render(); alert(`✅ 添加 ${added} 个单词`); }
+          else alert("没有新单词或格式不对");
+        };
+        reader.readAsText(file,"UTF-8");
+      }
+
+      // ---------- 手动导出/导入进度（JSON）----------
+      function exportProgress() {
+        const data = {
+          words: allWords,
+          progress: progress,
+          mistakes: mistakes,
+          exportTime: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `SAT_progress_${new Date().toISOString().slice(0,19)}.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        alert("进度已导出，请妥善保存此文件");
+      }
+
+      function importProgress(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const data = JSON.parse(e.target.result);
+            if (data.words && Array.isArray(data.words)) allWords = data.words;
+            if (data.progress && typeof data.progress === "object") progress = data.progress;
+            if (data.mistakes && typeof data.mistakes === "object") mistakes = data.mistakes;
+            render();
+            alert("进度导入成功！当前词库及熟练度已恢复");
+          } catch(err) {
+            alert("文件格式错误，请选择正确的 JSON 进度文件");
+          }
+        };
+        reader.readAsText(file, "UTF-8");
+      }
+
+      // 导出 Anki CSV
+      function exportAnki() {
+        if(!allWords.length){ alert("无单词"); return; }
+        let rows = ["Front;Back"];
+        for(let w of allWords){
+          let back = `${w.word} ${w.pos}\\n${w.definition}\\n\\n例: ${w.example}`;
+          rows.push(`"${w.word.replace(/"/g,'""')}";"${back.replace(/"/g,'""')}"`);
+        }
+        const blob = new Blob(["\uFEFF"+rows.join("\n")], {type:"text/csv"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `SAT1000_Anki_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }
+
+      // ---------- 测验逻辑 ----------
+      function getQuizCandidates(range) {
+        let candidates = [];
+        if (range === "all") candidates = [...allWords];
+        else if (range === "unlearned") candidates = allWords.filter(w=>!progress[w.word]);
+        else if (["0","1","2","3"].includes(range)) {
+          const lvl = parseInt(range);
+          candidates = allWords.filter(w=>{
+            const p=progress[w.word];
+            return p && p.level===lvl;
+          });
+        }
+        if (!candidates.length) return [];
+        let weighted = [];
+        for(let w of candidates){
+          let err = mistakes[w.word]||0;
+          let weight = 1 + err*2;
+          for(let i=0;i<weight;i++) weighted.push(w);
+        }
+        for(let i=weighted.length-1;i>0;i--){
+          let j=Math.floor(Math.random()*(i+1));
+          [weighted[i], weighted[j]] = [weighted[j], weighted[i]];
+        }
+        return weighted;
+      }
+
+      function generateOptions(correctWord) {
+        let others = allWords.filter(w=>w.word !== correctWord.word);
+        let otherDefs = [];
+        if(others.length){
+          let shuffled = [...others];
+          for(let i=shuffled.length-1;i>0;i--){
+            let j=Math.floor(Math.random()*(i+1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+          }
+          for(let i=0;i<Math.min(3,shuffled.length);i++) otherDefs.push(shuffled[i].definition);
+        }
+        while(otherDefs.length<3) otherDefs.push("(暂无其他释义)");
+        let opts = [
+          { def: correctWord.definition, correct: true },
+          { def: otherDefs[0], correct: false },
+          { def: otherDefs[1], correct: false },
+          { def: otherDefs[2], correct: false }
+        ];
+        for(let i=opts.length-1;i>0;i--){
+          let j=Math.floor(Math.random()*(i+1));
+          [opts[i], opts[j]] = [opts[j], opts[i]];
+        }
+        return opts;
+      }
+
+      function renderQuiz(word, opts) {
+        document.getElementById("quizWord").innerHTML = escapeHtml(word.word);
+        const container = document.getElementById("quizOptions");
+        container.innerHTML = "";
+        opts.forEach((opt,idx)=>{
+          const btn = document.createElement("div");
+          btn.className = "quiz-option bg-gray-100 rounded-lg p-2 text-sm hover:bg-indigo-100";
+          btn.innerHTML = `<span class="font-mono mr-2">${String.fromCharCode(65+idx)}.</span> ${escapeHtml(opt.def)}`;
+          btn.onclick = () => handleAnswer(opt.correct, word);
+          container.appendChild(btn);
+        });
+        document.getElementById("quizFeedback").innerHTML = "";
+      }
+
+      function handleAnswer(isCorrect, wordObj) {
+        if(!isCorrect){
+          mistakes[wordObj.word] = (mistakes[wordObj.word]||0) + 1;
+          document.getElementById("quizFeedback").innerHTML = `<span class="text-red-600">✗ 错误！正确：${escapeHtml(wordObj.definition)}</span>`;
+          speak(wordObj.word);
+        } else {
+          document.getElementById("quizFeedback").innerHTML = `<span class="text-green-600">✓ 正确！</span>`;
+        }
+        document.querySelectorAll(".quiz-option").forEach(opt=>opt.style.pointerEvents="none");
+        document.getElementById("nextQuizBtn").focus();
+      }
+
+      function loadNextQuiz() {
+        if(!isQuizActive) return;
+        const candidates = getQuizCandidates(quizRange);
+        if(!candidates.length){
+          alert("当前范围无单词可测验");
+          closeQuiz();
+          return;
+        }
+        currentQuizWord = candidates[0];
+        const opts = generateOptions(currentQuizWord);
+        renderQuiz(currentQuizWord, opts);
+        document.querySelectorAll(".quiz-option").forEach(opt=>opt.style.pointerEvents="auto");
+      }
+
+      function startQuiz(range) {
+        quizRange = range;
+        isQuizActive = true;
+        document.getElementById("quizRangeLabel").innerText = 
+          range==="all"?"全部":range==="unlearned"?"未练习":(range==="0"?"Again":range==="1"?"Hard":range==="2"?"Good":"Easy");
+        document.getElementById("mistakeCount").innerText = Object.keys(mistakes).length;
+        document.getElementById("quizPanel").classList.remove("hidden");
+        loadNextQuiz();
+      }
+
+      function closeQuiz() {
+        isQuizActive = false;
+        document.getElementById("quizPanel").classList.add("hidden");
+        render();
+      }
+
+      // ---------- 事件绑定 ----------
+      function bindEvents() {
+        document.querySelectorAll("#filterButtons .filter-btn").forEach(btn => {
+          btn.addEventListener("click", () => {
+            currentFilter = btn.getAttribute("data-filter");
+            render();
+          });
+        });
+        document.getElementById("searchInput").addEventListener("input", (e) => {
+          searchText = e.target.value;
+          render();
+        });
+        document.getElementById("importCsvBtn").addEventListener("click", () => document.getElementById("csvFileInput").click());
+        document.getElementById("csvFileInput").addEventListener("change", (e) => {
+          if(e.target.files.length) importCSV(e.target.files[0]);
+          e.target.value = "";
+        });
+        document.getElementById("exportProgressBtn").addEventListener("click", exportProgress);
+        document.getElementById("importProgressBtn").addEventListener("click", () => document.getElementById("progressFileInput").click());
+        document.getElementById("progressFileInput").addEventListener("change", (e) => {
+          if(e.target.files.length) importProgress(e.target.files[0]);
+          e.target.value = "";
+        });
+        document.getElementById("exportAnkiBtn").addEventListener("click", exportAnki);
+        document.getElementById("startQuizBtn").addEventListener("click", () => startQuiz(currentFilter === "all" ? "all" : currentFilter));
+        document.getElementById("closeQuizBtn").addEventListener("click", closeQuiz);
+        document.getElementById("nextQuizBtn").addEventListener("click", loadNextQuiz);
+        
+        document.getElementById("wordsGrid").addEventListener("click", (e) => {
+          let speakBtn = e.target.closest(".speak-trigger");
+          if(speakBtn){
+            let w = speakBtn.getAttribute("data-word");
+            if(w) speak(w);
+            e.preventDefault();
+            return;
+          }
+          let rateBtn = e.target.closest(".rate-btn");
+          if(rateBtn){
+            let w = rateBtn.getAttribute("data-word");
+            let lvl = rateBtn.getAttribute("data-level");
+            if(w && lvl!==null) rateWord(w, parseInt(lvl));
+            e.preventDefault();
+          }
+        });
+      }
+
+      // 启动
+      async function init() {
+        await fetchRemoteIfEmpty();
+        render();
+        bindEvents();
+      }
+      init();
+    })();
+  </script>
+</body>
+</html>
