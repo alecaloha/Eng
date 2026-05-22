@@ -19,10 +19,9 @@
   <div class="max-w-7xl mx-auto px-4 py-6">
     <div class="text-center mb-6">
       <h1 class="text-4xl font-bold text-indigo-700">SAT 1000</h1>
-      <p class="text-gray-500 text-sm">标记熟练度 · 错题优先 · 手动保存进度</p>
+      <p class="text-gray-500 text-sm">标记熟练度 · 错题优先 · 自动持久化本地进度</p>
     </div>
 
-    <!-- 工具栏 -->
     <div class="flex flex-wrap gap-2 justify-center mb-6">
       <button id="importCsvBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm shadow"><i class="fas fa-upload mr-1"></i>导入CSV</button>
       <button id="exportProgressBtn" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm shadow"><i class="fas fa-download mr-1"></i>导出进度</button>
@@ -31,7 +30,6 @@
       <button id="startQuizBtn" class="px-4 py-2 bg-rose-600 text-white rounded-xl text-sm shadow"><i class="fas fa-question-circle mr-1"></i>随机测验</button>
     </div>
 
-    <!-- 筛选器 -->
     <div class="flex flex-wrap gap-1 justify-center mb-5" id="filterButtons">
       <button data-filter="all" class="filter-btn active-filter px-3 py-1.5 rounded-lg text-xs font-medium">全部</button>
       <button data-filter="unlearned" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-100 text-purple-700">未练习</button>
@@ -41,17 +39,14 @@
       <button data-filter="3" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-green-100 text-green-700">Easy</button>
     </div>
 
-    <!-- 搜索框 -->
     <div class="relative max-w-md mx-auto mb-6">
       <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
       <input id="searchInput" type="text" placeholder="搜索单词..." class="w-full pl-9 pr-3 py-2 rounded-full border border-gray-200 bg-white text-sm">
     </div>
 
-    <!-- 状态栏 -->
-    <div id="statusBar" class="text-center text-gray-500 text-xs mb-4">加载默认词库中...</div>
+    <div id="statusBar" class="text-center text-gray-500 text-xs mb-4">加载词库中...</div>
     <div id="wordsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
 
-    <!-- 测验模态框 -->
     <div id="quizPanel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-2xl max-w-lg w-full shadow-xl overflow-hidden">
         <div class="bg-indigo-600 px-5 py-3 flex justify-between items-center">
@@ -76,16 +71,15 @@
     </div>
   </div>
 
-  <!-- 隐藏文件输入 -->
   <input type="file" id="csvFileInput" accept=".csv" class="hidden">
   <input type="file" id="progressFileInput" accept=".json" class="hidden">
 
   <script>
     (function(){
-      // ---------- 所有数据存储在内存中 ----------
+      // ---------- 数据存储（初始化时优先读取本地存储） ----------
       let allWords = [];          // [{ word, pos, definition, example }]
-      let progress = {};         // { word: { level:0-3, timestamp } }
-      let mistakes = {};         // { word: errorCount }
+      let progress = JSON.parse(localStorage.getItem("SAT_local_progress")) || {};         // { word: { level:0-3, timestamp } }
+      let mistakes = JSON.parse(localStorage.getItem("SAT_local_mistakes")) || {};         // { word: errorCount }
       let currentFilter = "all";
       let searchText = "";
       
@@ -177,6 +171,10 @@
       function rateWord(word, level) {
         if (!word) return;
         progress[word] = { level: level, timestamp: Date.now() };
+        
+        // 【新增】打分时，同步保存进度到本地
+        localStorage.setItem("SAT_local_progress", JSON.stringify(progress));
+        
         render();
         if (isQuizActive && currentQuizWord && currentQuizWord.word === word) {
           loadNextQuiz();
@@ -191,7 +189,7 @@
         speechSynthesis.speak(u);
       }
 
-      // ---------- 远程加载默认词库（仅当 allWords 为空）----------
+      // ---------- 远程加载默认词库 ----------
       async function fetchRemoteIfEmpty() {
         if (allWords.length > 0) return;
         try {
@@ -230,6 +228,8 @@
           }
           if (newWords.length) {
             allWords = newWords;
+            // 下载完后，把词库也缓存在本地
+            localStorage.setItem("SAT_local_words", JSON.stringify(allWords));
             render();
           }
         } catch(e) { console.warn("自动加载失败", e); }
@@ -271,7 +271,12 @@
               added++;
             }
           }
-          if(added){ render(); alert(`✅ 添加 ${added} 个单词`); }
+          if(added){ 
+            // 导入新词后更新本地词库缓存
+            localStorage.setItem("SAT_local_words", JSON.stringify(allWords));
+            render(); 
+            alert(`✅ 添加 ${added} 个单词`); 
+          }
           else alert("没有新单词或格式不对");
         };
         reader.readAsText(file,"UTF-8");
@@ -302,8 +307,14 @@
             if (data.words && Array.isArray(data.words)) allWords = data.words;
             if (data.progress && typeof data.progress === "object") progress = data.progress;
             if (data.mistakes && typeof data.mistakes === "object") mistakes = data.mistakes;
+            
+            // 【新增】手动导入成功后，强制覆盖更新本地 localStorage 缓存
+            localStorage.setItem("SAT_local_words", JSON.stringify(allWords));
+            localStorage.setItem("SAT_local_progress", JSON.stringify(progress));
+            localStorage.setItem("SAT_local_mistakes", JSON.stringify(mistakes));
+            
             render();
-            alert("进度导入成功！当前词库及熟练度已恢复");
+            alert("进度导入成功！当前词库及熟练度已同步至浏览器本地");
           } catch(err) {
             alert("文件格式错误，请选择正确的 JSON 进度文件");
           }
@@ -395,6 +406,10 @@
       function handleAnswer(isCorrect, wordObj) {
         if(!isCorrect){
           mistakes[wordObj.word] = (mistakes[wordObj.word]||0) + 1;
+          
+          // 【新增】错题增加时，自动保存错题本到本地
+          localStorage.setItem("SAT_local_mistakes", JSON.stringify(mistakes));
+          
           document.getElementById("quizFeedback").innerHTML = `<span class="text-red-600">✗ 错误！正确：${escapeHtml(wordObj.definition)}</span>`;
           speak(wordObj.word);
         } else {
@@ -416,22 +431,6 @@
         const opts = generateOptions(currentQuizWord);
         renderQuiz(currentQuizWord, opts);
         document.querySelectorAll(".quiz-option").forEach(opt=>opt.style.pointerEvents="auto");
-      }
-
-      function startQuiz(range) {
-        quizRange = range;
-        isQuizActive = true;
-        document.getElementById("quizRangeLabel").innerText = 
-          range==="all"?"全部":range==="unlearned"?"未练习":(range==="0"?"Again":range==="1"?"Hard":range==="2"?"Good":"Easy");
-        document.getElementById("mistakeCount").innerText = Object.keys(mistakes).length;
-        document.getElementById("quizPanel").classList.remove("hidden");
-        loadNextQuiz();
-      }
-
-      function closeQuiz() {
-        isQuizActive = false;
-        document.getElementById("quizPanel").classList.add("hidden");
-        render();
       }
 
       // ---------- 事件绑定 ----------
@@ -480,9 +479,39 @@
         });
       }
 
-      // 启动
+      function startQuiz(range) {
+        quizRange = range;
+        isQuizActive = true;
+        document.getElementById("quizRangeLabel").innerText = 
+          range==="all"?"全部":range==="unlearned"?"未练习":(range==="0"?"Again":range==="1"?"Hard":range==="2"?"Good":"Easy");
+        document.getElementById("mistakeCount").innerText = Object.keys(mistakes).length;
+        document.getElementById("quizPanel").classList.remove("hidden");
+        loadNextQuiz();
+      }
+
+      function closeQuiz() {
+        isQuizActive = false;
+        document.getElementById("quizPanel").classList.add("hidden");
+        render();
+      }
+
+      // 【全面优化】启动逻辑
       async function init() {
-        await fetchRemoteIfEmpty();
+        // 1. 优先尝试从本地缓存恢复历史词库，避免每次都请求网络
+        const localWords = localStorage.getItem("SAT_local_words");
+        if (localWords) {
+          try {
+            allWords = JSON.parse(localWords);
+          } catch(e) {
+            allWords = [];
+          }
+        }
+        
+        // 2. 如果本地没有词库缓存，才去获取远程默认词库
+        if (allWords.length === 0) {
+          await fetchRemoteIfEmpty();
+        }
+        
         render();
         bindEvents();
       }
